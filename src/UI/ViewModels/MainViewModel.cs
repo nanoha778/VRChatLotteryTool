@@ -17,6 +17,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ISessionStateService       _state;
     private readonly ISchedulerService          _scheduler;
     private readonly IVRChatApiClient           _api;
+    private readonly ThemeService               _theme;
     public  ILogService                         Log { get; }
     public  IVRChatNotificationService          NotificationService { get; }
 
@@ -57,7 +58,8 @@ public partial class MainViewModel : ObservableObject
         ISchedulerService scheduler,
         ILogService log,
         IVRChatNotificationService notificationService,
-        IVRChatApiClient api)
+        IVRChatApiClient api,
+        ThemeService theme)
     {
         _sp        = sp;
         _state     = state;
@@ -65,6 +67,7 @@ public partial class MainViewModel : ObservableObject
         Log        = log;
         NotificationService = notificationService;
         _api       = api;
+        _theme     = theme;
 
         // スケジューラーイベント
         _scheduler.ReceptionStarted += (_, _) => OnReceptionStarted();
@@ -81,12 +84,21 @@ public partial class MainViewModel : ObservableObject
         _receptionStartTime = s.ReceptionStartTime;
         _receptionEndTime   = s.ReceptionEndTime;
         _replyTime          = s.ReplyTime;
+        _isDarkTheme        = s.Theme == AppTheme.Dark;
         ModeLabel = _isReliefMode ? "救済" : "公平";
 
         StartInstancePolling();
     }
 
-    // ── 設定変更時に自動保存 ──────────────────────────────
+    // ── 全般設定 ──────────────────────────────────────────
+    [ObservableProperty] private bool _isDarkTheme = true;
+
+    partial void OnIsDarkThemeChanged(bool value)
+    {
+        var t = value ? AppTheme.Dark : AppTheme.Light;
+        _theme.Apply(t);
+        SaveSettings();
+    }
     private void SaveSettings() =>
         new AppSettings
         {
@@ -95,6 +107,7 @@ public partial class MainViewModel : ObservableObject
             ReceptionStartTime = ReceptionStartTime,
             ReceptionEndTime   = ReceptionEndTime,
             ReplyTime          = ReplyTime,
+            Theme              = IsDarkTheme ? AppTheme.Dark : AppTheme.Light,
         }.Save();
 
     partial void OnWinnerCountChanged(int value)           => SaveSettings();

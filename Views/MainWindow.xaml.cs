@@ -221,6 +221,11 @@ public partial class MainWindow : Window
 
     private void ClearLog(object sender, RoutedEventArgs e) => _vm.Log.Entries.Clear();
 
+    private void OpenDataFolder(object sender, RoutedEventArgs e)
+    {
+        System.Diagnostics.Process.Start("explorer.exe", AppPaths.DataDir);
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         base.OnClosed(e);

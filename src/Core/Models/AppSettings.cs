@@ -2,16 +2,18 @@ using System.IO;
 using System.Text.Json;
 using VRChatLotteryTool.Core;
 using VRChatLotteryTool.Core.Models;
+using VRChatLotteryTool.Core.Services;
 
 namespace VRChatLotteryTool.Core.Models;
 
 public class AppSettings
 {
-    public int         WinnerCount          { get; set; } = 1;
-    public LotteryMode Mode                 { get; set; } = LotteryMode.Fair;
-    public string      ReceptionStartTime   { get; set; } = "21:00";
-    public string      ReceptionEndTime     { get; set; } = "22:00";
-    public string      ReplyTime            { get; set; } = "22:05";
+    public int         WinnerCount        { get; set; } = 1;
+    public LotteryMode Mode               { get; set; } = LotteryMode.Fair;
+    public string      ReceptionStartTime { get; set; } = "21:00";
+    public string      ReceptionEndTime   { get; set; } = "22:00";
+    public string      ReplyTime          { get; set; } = "22:05";
+    public AppTheme    Theme              { get; set; } = AppTheme.Dark;
 
     // ── 永続化 ────────────────────────────────────────────────────────
 
