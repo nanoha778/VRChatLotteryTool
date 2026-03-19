@@ -1,131 +1,75 @@
 # VRChat Lottery Tool
 
-VRChat の `Request Invite` を自動受付・抽選・Invite 送信する .NET 10 WPF デスクトップアプリです。
+VRChat の Request Invite を自動受付し、重み付き抽選で当選者を選び Invite を送信する WPF デスクトップアプリケーションです。
 
----
+## 動作環境
 
-## 必要環境
+- Windows 10 / 11
+- .NET 10 Desktop Runtime
+- VRChat アカウント（2FA 対応）
 
-| 項目 | バージョン |
-|------|-----------|
-| Visual Studio | 2022 以降 (2026) |
-| .NET SDK | 10.0 |
-| OS | Windows 10/11 |
+## インストール
 
----
+1. リリースページから `VRChatLotteryTool.zip` をダウンロード
+2. 任意のフォルダに展開
+3. `VRChatLotteryTool.exe` を実行
 
-## セットアップ
+データファイルは `%AppData%\VRChatLotteryTool\` に自動作成されます。
 
-```bash
-# NuGet パッケージ復元 (Visual Studio が自動実行)
-dotnet restore
+## 使い方
 
-# ビルド
-dotnet build
+### 1. ログイン
 
-# 実行
-dotnet run
-```
+起動するとログイン画面が表示されます。VRChat のユーザー名（またはメールアドレス）とパスワードを入力してログインしてください。2要素認証が有効な場合はコードの入力画面が表示されます。「ログイン情報を保存する」にチェックを入れると次回起動時に自動ログインします。
 
-初回起動時に `lottery.db`（SQLite）がアプリと同じディレクトリに自動生成されます。
+### 2. セッション設定
 
----
+| 項目 | 説明 |
+|---|---|
+| 当選人数 | 抽選で選ぶ人数 |
+| 抽選モード | 公平 / 救済（下記参照） |
+| 受付開始時間 | Request Invite の受付を開始する時刻（HH:mm） |
+| 受付終了時間 | 受付を締め切る時刻（HH:mm） |
+| 返信時間 | Invite を送信する時刻（HH:mm） |
 
-## ディレクトリ構成
+### 3. セッション開始〜終了
 
-```
-VRChatLotteryTool/
-├── VRChatLotteryTool.csproj
-├── App.xaml / App.xaml.cs           # アプリエントリーポイント・DI設定
-│
-├── src/
-│   ├── Core/
-│   │   ├── Models/
-│   │   │   ├── User.cs              # ユーザー統計モデル
-│   │   │   ├── LotterySession.cs    # セッション・ステータス・モード定義
-│   │   │   ├── LotteryEntry.cs      # 応募単位モデル
-│   │   │   ├── AppSettings.cs       # 設定モデル
-│   │   │   └── LogEntry.cs          # ログエントリモデル
-│   │   │
-│   │   └── Services/
-│   │       ├── WeightCalculator.cs       # 重み付き抽選計算（公平/救済）
-│   │       ├── LotteryService.cs         # 抽選実行ロジック
-│   │       ├── LogService.cs             # ログ管理
-│   │       ├── SessionStateService.cs    # セッション状態管理
-│   │       ├── SchedulerService.cs       # 時刻スケジューラ
-│   │       ├── VRChatNotificationService.cs  # VRChat通知受信（要実装）
-│   │       └── InviteService.cs          # Invite送信（要実装）
-│   │
-│   ├── Data/
-│   │   ├── AppDbContext.cs           # EF Core DbContext
-│   │   └── Repositories/
-│   │       └── Repositories.cs       # User / Session / Entry リポジトリ
-│   │
-│   └── UI/
-│       ├── ViewModels/
-│       │   └── MainViewModel.cs      # メイン ViewModel (MVVM)
-│       ├── Views/
-│       │   ├── MainWindow.xaml       # メインウィンドウ UI
-│       │   ├── MainWindow.xaml.cs    # コードビハインド
-│       │   └── Styles.xaml           # 共通スタイル
-│       └── Converters/
-│           └── Converters.cs         # IValueConverter 群
-│
-└── resources/                        # アイコン等リソース
-```
+1. **「セッション開始」** を押すと指定時刻に自動で受付開始・終了・Invite 送信が行われます
+2. 受付中に参加者が Request Invite を送ると応募者一覧に追加されます
+3. 返信時間になると重み付き抽選が実行され、当選者に自動で Invite が送られます
+4. 完了後は自動的に待機中に戻り、次のセッションを開始できます
 
----
+**「今すぐ抽選」** ボタンで手動実行も可能です。  
+**「セッション停止」** ボタンでセッションを途中キャンセルできます。
 
-## VRChat 連携の実装について
+### 4. 抽選モード
 
-本アプリには **スタブ実装** が含まれており、以下の2ファイルを実際の VRChat API に合わせて実装してください。
+**公平モード**：参加機会をできるだけ均等にする
+- 基本重み 100 からスタート
+- 直近 24 時間以内に当選していると −15
+- 累計当選数 × 2 を減算（上限 −30）
 
-### `VRChatNotificationService.cs`
-Request Invite の受信処理です。VRChat の通知取得方法（OSC / ログ監視 / 非公式API等）に応じて `RequestInviteReceived` イベントを発火してください。
+**救済モード**：長期間当選していない人を優遇する
+- 基本重み 100 からスタート
+- 連続落選数 × 10 を加算（上限 +100）
+- 一度も当選したことがない場合 +30
+- 直近 24 時間以内に当選していると −25
+- 累計当選数 × 5 を減算（上限 −50）
 
-```csharp
-// 受信時にこのイベントを発火する
-RequestInviteReceived?.Invoke(this, new RequestInviteEventArgs
-{
-    UserId = "usr_xxxx",
-    DisplayName = "UserName",
-    ReceivedAt = DateTime.Now
-});
-```
+### 5. デバッグ機能
 
-### `InviteService.cs`
-当選者への Invite 送信処理です。`SendInviteAsync` メソッド内に VRChat API 呼び出しを実装してください。
+- タイトルバーに現在時刻と在室ワールド名を表示
+- **「テスト送信」** ボタンで疑似的な Request Invite イベントを発生させて動作確認できます（Invite は実際には送信されません）
 
----
+## データ保存先
 
-## 抽選ロジック
+| ファイル | 内容 |
+|---|---|
+| `%AppData%\VRChatLotteryTool\.authcookie` | ログインセッション Cookie |
+| `%AppData%\VRChatLotteryTool\.credentials` | 暗号化済みパスワード（DPAPI） |
+| `%AppData%\VRChatLotteryTool\appsettings.json` | セッション設定 |
+| `%AppData%\VRChatLotteryTool\lottery.db` | 抽選履歴・ユーザー統計（SQLite） |
 
-### 公平モード
-```
-重み = 100 - 直近当選ペナルティ(15) - 累計当選数 × 2 (上限30)
-```
+## ライセンス
 
-### 救済モード
-```
-重み = 100 + 連続落選数 × 10 (上限100) + 未当選ボーナス(30)
-           - 直近当選ペナルティ(25) - 累計当選数 × 5 (上限50)
-```
-
-重みの最小値は `0.1` で、0以下にはなりません。
-
----
-
-## テスト用機能
-
-UI の「🧪 テスト送信 (Simulate)」ボタンを押すと、ランダムなユーザーIDで Request Invite イベントを発火できます。VRChat に接続せずに動作確認が可能です。
-
----
-
-## 後回し候補 (将来実装)
-
-- ブラックリスト / ホワイトリスト
-- 同日再当選禁止
-- 重みパラメータのUI編集
-- 抽選シミュレーション
-- Invite 送信リトライ
-- Discord 通知連携
+MIT License
