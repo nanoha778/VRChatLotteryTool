@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>VRChatLotteryTool</AssemblyName>
+    <RootNamespace>VRChatLotteryTool</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Styles.xaml は ResourceDictionary: Page 自動インクルードから除外して Resource として埋め込み -->
+    <Page     Remove="Views\Styles.xaml" />
+    <Resource Include="Views\Styles.xaml" />
+
+    <!-- 旧パスが残っていても除外 -->
+    <Page Remove="src\UI\Views\MainWindow.xaml" />
+    <Page Remove="src\UI\Views\Styles.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.5" />
+  </ItemGroup>
+
+</Project>
