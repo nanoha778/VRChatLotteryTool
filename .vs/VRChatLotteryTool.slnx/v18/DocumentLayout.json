@@ -1,36 +1,12 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "D:\\GitHub\\VRChatLotteryTool\\",
-  "Documents": [
-    {
-      "AbsoluteMoniker": "D:0:0:{282644EE-D7CF-F4C7-B51A-DAD662C4284F}|VRChatLotteryTool.csproj|d:\\github\\vrchatlotterytool\\views\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
-      "RelativeMoniker": "D:0:0:{282644EE-D7CF-F4C7-B51A-DAD662C4284F}|VRChatLotteryTool.csproj|solutionrelative:views\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
-    }
-  ],
+  "Documents": [],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
       "VerticalTabListWidth": 256,
-      "DocumentGroups": [
-        {
-          "DockedWidth": 200,
-          "SelectedChildIndex": 0,
-          "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "MainWindow.xaml",
-              "DocumentMoniker": "D:\\GitHub\\VRChatLotteryTool\\Views\\MainWindow.xaml",
-              "RelativeDocumentMoniker": "Views\\MainWindow.xaml",
-              "ToolTip": "D:\\GitHub\\VRChatLotteryTool\\Views\\MainWindow.xaml",
-              "RelativeToolTip": "Views\\MainWindow.xaml",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
-              "WhenOpened": "2026-03-19T04:50:25.93Z",
-              "EditorCaption": ""
-            }
-          ]
-        }
-      ]
+      "DocumentGroups": []
     }
   ]
 }

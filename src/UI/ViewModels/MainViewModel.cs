@@ -13,33 +13,34 @@ namespace VRChatLotteryTool.UI.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
-    private readonly IServiceProvider        _sp;
-    private readonly ISchedulerService       _scheduler;
-    private readonly ISessionStateService    _state;
-    private readonly IVRChatApiClient        _api;
-    public  ILogService                      Log { get; }
-    public  IVRChatNotificationService       NotificationService { get; }
+    private readonly IServiceProvider           _sp;
+    private readonly ISessionStateService       _state;
+    private readonly ISchedulerService          _scheduler;
+    private readonly IVRChatApiClient           _api;
+    public  ILogService                         Log { get; }
+    public  IVRChatNotificationService          NotificationService { get; }
 
     private LotterySession? _activeSession;
-
     private static readonly string CookiePath = AppPaths.AuthCookie;
 
     // ── 設定 ──────────────────────────────────────────────
-    [ObservableProperty] private int    _winnerCount       = 1;
-    [ObservableProperty] private bool   _isReliefMode      = false;
+    [ObservableProperty] private int    _winnerCount        = 1;
+    [ObservableProperty] private bool   _isReliefMode       = false;
+    [ObservableProperty] private string _modeLabel          = "公平";
     [ObservableProperty] private string _receptionStartTime = "21:00";
     [ObservableProperty] private string _receptionEndTime   = "22:00";
     [ObservableProperty] private string _replyTime          = "22:05";
 
     // ── 状態表示 ───────────────────────────────────────────
-    [ObservableProperty] private string _statusText      = "待機中";
+    [ObservableProperty] private string _statusText         = "待機中";
     [ObservableProperty] private int    _entryCount;
-    [ObservableProperty] private string _nextReplyTime   = "--:--:--";
-    [ObservableProperty] private bool   _canDraw;
-    [ObservableProperty] private bool   _canStartSession  = true;
-    [ObservableProperty] private bool   _canStopSession   = false;   // セッション停止ボタン用
-    [ObservableProperty] private string _modeLabel        = "公平";
-    [ObservableProperty] private string _loginUserName    = string.Empty;
+    [ObservableProperty] private string _nextReplyTime      = "--:--";
+    [ObservableProperty] private bool   _canStartSession    = true;   // 1. セッション開始
+    [ObservableProperty] private bool   _canStartReception  = false;  // 2. 受付開始（手動）
+    [ObservableProperty] private bool   _canCloseReception  = false;  // 3. 受付終了（手動）
+    [ObservableProperty] private bool   _canDraw            = false;  // 4. 抽選・Invite送信（手動）
+    [ObservableProperty] private bool   _canStopSession     = false;  // 5. セッション終了
+    [ObservableProperty] private string _loginUserName      = string.Empty;
     [ObservableProperty] private string _currentWorldName   = "--";
     [ObservableProperty] private string _currentInstanceId  = string.Empty;
     [ObservableProperty] private string _currentTime        = string.Empty;
@@ -47,35 +48,33 @@ public partial class MainViewModel : ObservableObject
     private Timer? _instancePollingTimer;
     private Timer? _clockTimer;
 
-    public ObservableCollection<LogEntry>    LogEntries => Log.Entries;
-    public ObservableCollection<EntryViewModel> Entries { get; } = [];
+    public ObservableCollection<LogEntry>       LogEntries => Log.Entries;
+    public ObservableCollection<EntryViewModel> Entries    { get; } = [];
 
     public MainViewModel(
         IServiceProvider sp,
-        ISchedulerService scheduler,
         ISessionStateService state,
+        ISchedulerService scheduler,
         ILogService log,
         IVRChatNotificationService notificationService,
         IVRChatApiClient api)
     {
-        _sp      = sp;
+        _sp        = sp;
+        _state     = state;
         _scheduler = scheduler;
-        _state   = state;
-        Log      = log;
+        Log        = log;
         NotificationService = notificationService;
-        _api     = api;
+        _api       = api;
 
+        // スケジューラーイベント
         _scheduler.ReceptionStarted += (_, _) => OnReceptionStarted();
         _scheduler.ReceptionEnded   += (_, _) => OnReceptionEnded();
-        _scheduler.ReplyTimeReached += async (_, _) => await OnReplyTimeReachedAsync();
+        _scheduler.ReplyTimeReached += async (_, _) => await ExecuteDrawAndSendAsync();
 
         notificationService.RequestInviteReceived += OnRequestInviteReceived;
-        // Start() はログイン完了後に App.xaml.cs から呼ぶ
 
-        // ログイン済みユーザー名を表示
         LoginUserName = api.CurrentUser?.DisplayName ?? string.Empty;
 
-        // 保存済み設定を読み込む
         var s = AppSettings.Load();
         _winnerCount        = s.WinnerCount;
         _isReliefMode       = s.Mode == LotteryMode.Relief;
@@ -84,71 +83,7 @@ public partial class MainViewModel : ObservableObject
         _replyTime          = s.ReplyTime;
         ModeLabel = _isReliefMode ? "救済" : "公平";
 
-        // インスタンス情報を30秒ごとに更新
         StartInstancePolling();
-    }
-
-    // ── インスタンス情報ポーリング ────────────────────────
-    private void StartInstancePolling()
-    {
-        // 現在時刻タイマー（1秒ごと）
-        _clockTimer = new Timer(
-            _ => System.Windows.Application.Current?.Dispatcher.Invoke(
-                () => CurrentTime = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")),
-            null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
-
-        // インスタンス情報（起動直後 + 30秒ごと）
-        _ = Task.Run(UpdateInstanceInfoAsync);
-        _instancePollingTimer = new Timer(
-            async _ => await UpdateInstanceInfoAsync(),
-            null,
-            TimeSpan.FromSeconds(30),
-            TimeSpan.FromSeconds(30));
-    }
-
-    private async Task UpdateInstanceInfoAsync()
-    {
-        try
-        {
-            if (!_api.IsLoggedIn) return;
-
-            var location = await _api.GetLocationAsync();
-
-            string worldName, instanceId;
-            if (string.IsNullOrEmpty(location)
-                || location.Equals("offline",   StringComparison.OrdinalIgnoreCase)
-                || location.Equals("traveling", StringComparison.OrdinalIgnoreCase))
-            {
-                worldName  = "オフライン";
-                instanceId = string.Empty;
-            }
-            else if (location.Equals("private", StringComparison.OrdinalIgnoreCase))
-            {
-                worldName  = "プライベート";
-                instanceId = location;
-            }
-            else
-            {
-                // location = "wrld_xxx:12345~hidden(...)~region(jp)"
-                var colonIdx = location.IndexOf(':');
-                var worldId  = colonIdx > 0 ? location[..colonIdx]        : location;
-                instanceId   = colonIdx > 0 ? location[(colonIdx + 1)..] : location;
-
-                // GET /worlds/{worldId} でワールド名を取得
-                var name = await _api.GetWorldNameAsync(worldId);
-                worldName = name ?? worldId;  // 取得失敗時は worldId をそのまま表示
-            }
-
-            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
-            {
-                CurrentWorldName  = worldName;
-                CurrentInstanceId = location ?? string.Empty;  // ToolTip にフル文字列
-            });
-        }
-        catch (Exception ex)
-        {
-            Log.Warning($"[Instance] 取得失敗: {ex.Message}");
-        }
     }
 
     // ── 設定変更時に自動保存 ──────────────────────────────
@@ -159,7 +94,7 @@ public partial class MainViewModel : ObservableObject
             Mode               = IsReliefMode ? LotteryMode.Relief : LotteryMode.Fair,
             ReceptionStartTime = ReceptionStartTime,
             ReceptionEndTime   = ReceptionEndTime,
-            ReplyTime          = ReplyTime
+            ReplyTime          = ReplyTime,
         }.Save();
 
     partial void OnWinnerCountChanged(int value)           => SaveSettings();
@@ -172,18 +107,14 @@ public partial class MainViewModel : ObservableObject
     partial void OnReceptionEndTimeChanged(string value)   => SaveSettings();
     partial void OnReplyTimeChanged(string value)          => SaveSettings();
 
-    // ── セッション開始 ────────────────────────────────────
+    // ════════════════════════════════════════════════════════
+    // 1. セッション開始
+    // ════════════════════════════════════════════════════════
     [RelayCommand]
     private async Task StartSessionAsync()
     {
         if (!TryParseSettings(out var startSpan, out var endSpan, out var replySpan))
             return;
-
-        if (startSpan >= endSpan)
-        {
-            Log.Warning("受付開始時間は終了時間より前に設定してください。");
-            return;
-        }
 
         var today = DateTime.Now.Date;
         var session = new LotterySession
@@ -199,32 +130,147 @@ public partial class MainViewModel : ObservableObject
         using var scope = _sp.CreateScope();
         var sessionRepo = scope.ServiceProvider.GetRequiredService<ILotterySessionRepository>();
         _activeSession = await sessionRepo.CreateAsync(session);
-
         _state.SetSession(_activeSession);
-        CanStartSession = false;
-        CanStopSession  = true;
-        NextReplyTime   = _activeSession.ReplyAt.ToString("HH:mm:ss");
-        UpdateStatusText(SessionStatus.BeforeReception);
 
+        // スケジューラー起動（時刻自動処理）
         _scheduler.Start(_activeSession);
-        Log.Info($"セッションを作成しました。返信予定: {_activeSession.ReplyAt:HH:mm:ss}");
+
+        CanStartSession   = false;
+        CanStartReception = true;   // 手動受付開始を有効化
+        CanStopSession    = true;
+        NextReplyTime     = _activeSession.ReplyAt.ToString("HH:mm");
+        UpdateStatusText(SessionStatus.BeforeReception);
+        Log.Info($"セッションを開始しました。受付開始: {_activeSession.ReceptionStartAt:HH:mm} / 終了: {_activeSession.ReceptionEndAt:HH:mm} / Invite: {_activeSession.ReplyAt:HH:mm}");
     }
 
-    // ── セッション停止 ────────────────────────────────────
+    // ════════════════════════════════════════════════════════
+    // 2. 受付開始（手動）
+    // ════════════════════════════════════════════════════════
+    [RelayCommand]
+    private void StartReceptionManually()
+    {
+        if (_activeSession == null) return;
+        OnReceptionStarted();
+        Log.Info("受付を手動で開始しました。");
+    }
+
+    private void OnReceptionStarted()
+    {
+        if (_activeSession == null) return;
+        _state.UpdateStatus(SessionStatus.Accepting);
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            CanStartReception = false;
+            CanCloseReception = true;
+        });
+        UpdateStatusText(SessionStatus.Accepting);
+        Log.Info("受付中です。Request Invite をお待ちください。");
+    }
+
+    // ════════════════════════════════════════════════════════
+    // 3. 受付終了（手動）
+    // ════════════════════════════════════════════════════════
+    [RelayCommand]
+    private void CloseReceptionManually()
+    {
+        if (_activeSession == null) return;
+        OnReceptionEnded();
+        Log.Info("受付を手動で終了しました。");
+    }
+
+    private void OnReceptionEnded()
+    {
+        if (_activeSession == null) return;
+        _activeSession.ReceptionEndAt = DateTime.Now;
+        _activeSession.Status         = SessionStatus.ReceptionClosed;
+        _state.UpdateStatus(SessionStatus.ReceptionClosed);
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            CanCloseReception = false;
+            CanDraw           = EntryCount > 0;
+        });
+        UpdateStatusText(SessionStatus.ReceptionClosed);
+        Log.Info($"受付を終了しました。応募数: {EntryCount}人");
+    }
+
+    // ════════════════════════════════════════════════════════
+    // 4. 今すぐ抽選・Invite送信（手動）
+    // ════════════════════════════════════════════════════════
+    [RelayCommand]
+    private async Task DrawNowAsync()
+    {
+        if (_activeSession == null) { Log.Warning("セッションが開始されていません。"); return; }
+        if (_state.IsDrawn)         { Log.Warning("すでに抽選済みです。"); return; }
+        if (Entries.Count == 0)     { Log.Warning("応募者が0人のため抽選できません。"); return; }
+        CanDraw = false;
+        await ExecuteDrawAndSendAsync();
+    }
+
+    private async Task ExecuteDrawAndSendAsync()
+    {
+        if (_activeSession == null) return;
+        try
+        {
+            using var scope    = _sp.CreateScope();
+            var lotteryService = scope.ServiceProvider.GetRequiredService<ILotteryService>();
+            var inviteService  = scope.ServiceProvider.GetRequiredService<IInviteService>();
+            var sessionRepo    = scope.ServiceProvider.GetRequiredService<ILotterySessionRepository>();
+            var entryRepo      = scope.ServiceProvider.GetRequiredService<ILotteryEntryRepository>();
+
+            // 受付がまだ終了していなければ自動終了
+            if (_state.Status == SessionStatus.Accepting)
+                OnReceptionEnded();
+
+            if (!_state.IsDrawn)
+            {
+                var winners = await lotteryService.DrawAsync(_activeSession);
+                foreach (var w in winners) Log.Success($"当選: {w.DisplayName}");
+                _state.MarkDrawn();
+                _activeSession.DrawExecutedAt = DateTime.UtcNow;
+                _activeSession.Status         = SessionStatus.Drawn;
+            }
+
+            var targets = _activeSession.Entries.Where(e => e.IsWinner).ToList();
+            await inviteService.SendInvitesAsync(targets);
+
+            await entryRepo.UpdateRangeAsync(_activeSession.Entries);
+            _activeSession.ReplyExecutedAt = DateTime.UtcNow;
+            _activeSession.Status          = SessionStatus.Completed;
+            await sessionRepo.UpdateAsync(_activeSession);
+
+            _state.UpdateStatus(SessionStatus.Completed);
+            UpdateStatusText(SessionStatus.Completed);
+
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                CanDraw        = false;
+                CanStopSession = true;
+                RefreshEntries();
+            });
+
+            Log.Success("Invite 送信が完了しました。セッション停止ボタンで次のセッションに進めます。");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"抽選・送信中にエラーが発生しました: {ex.Message}");
+        }
+    }
+
+    // ════════════════════════════════════════════════════════
+    // 5. セッション終了
+    // ════════════════════════════════════════════════════════
     [RelayCommand]
     private async Task StopSessionAsync()
     {
         if (_activeSession == null) return;
 
         var result = MessageBox.Show(
-            "現在のセッションを停止しますか?\n応募データはリセットされます。",
-            "セッション停止", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
+            "セッションを終了しますか？",
+            "セッション終了", MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (result != MessageBoxResult.Yes) return;
 
         _scheduler.Stop();
 
-        // DBのステータスを更新
         if (_activeSession.Status != SessionStatus.Completed)
         {
             _activeSession.Status = SessionStatus.Error;
@@ -233,45 +279,8 @@ public partial class MainViewModel : ObservableObject
             await sessionRepo.UpdateAsync(_activeSession);
         }
 
-        // UI・状態リセット
-        _activeSession = null;
-        _state.Reset();
-
-        Application.Current?.Dispatcher.Invoke(() =>
-        {
-            Entries.Clear();
-            EntryCount    = 0;
-            CanDraw       = false;
-            CanStartSession = true;
-            CanStopSession  = false;
-            NextReplyTime   = "--:--:--";
-        });
-
-        UpdateStatusText(SessionStatus.Waiting);
-        Log.Info("セッションを停止しました。");
-    }
-
-    // ── 今すぐ抽選 ────────────────────────────────────────
-    [RelayCommand]
-    private async Task DrawNowAsync()
-    {
-        if (_activeSession == null) { Log.Warning("セッションが開始されていません。"); return; }
-        if (_state.IsDrawn)         { Log.Warning("すでに抽選済みです。"); return; }
-        if (Entries.Count == 0)     { Log.Warning("応募者が0人のため抽選できません。"); return; }
-
-        CanDraw = false;
-        await ExecuteDrawAndSendAsync();
-    }
-
-    // ── テスト: Request Invite シミュレート ───────────────
-    [RelayCommand]
-    private void SimulateRequestInvite()
-    {
-        if (NotificationService is VRChatNotificationService svc)
-        {
-            var id = $"user_{Guid.NewGuid().ToString()[..8]}";
-            svc.SimulateRequestInvite(id, $"TestUser_{id[5..]}");
-        }
+        ResetSession();
+        Log.Info("セッションを終了しました。");
     }
 
     // ── ログアウト ─────────────────────────────────────────
@@ -279,29 +288,21 @@ public partial class MainViewModel : ObservableObject
     private async Task LogoutAsync()
     {
         var result = MessageBox.Show(
-            "ログアウトしますか?\nアプリを再起動してログインし直す必要があります。",
+            "ログアウトしますか？",
             "ログアウト", MessageBoxButton.YesNo, MessageBoxImage.Question);
-
         if (result != MessageBoxResult.Yes) return;
 
-        // セッション中なら停止
-        if (_activeSession != null)
-            await StopSessionAsync();
+        if (_activeSession != null) await StopSessionAsync();
 
-        // Pipeline切断
         NotificationService.Stop();
-
-        // API ログアウト・Cookie削除
         await _api.LogoutAsync();
         if (File.Exists(CookiePath)) File.Delete(CookiePath);
 
-        Log.Info("ログアウトしました。アプリを再起動してください。");
-
-        // ログアウト後はアプリを終了してログイン画面へ促す
+        Log.Info("ログアウトしました。");
         Application.Current?.Shutdown();
     }
 
-    // ── Request Invite 受信処理 ───────────────────────────
+    // ── Request Invite 受信 ───────────────────────────────
     private async void OnRequestInviteReceived(object? sender, RequestInviteEventArgs e)
     {
         if (_activeSession == null) return;
@@ -329,7 +330,6 @@ public partial class MainViewModel : ObservableObject
         var dup = await entryRepo.FindDuplicateAsync(_activeSession.SessionId, e.UserId);
         if (dup != null)
         {
-            // 重複応募 → NotificationId だけ最新に更新（古い通知は失効している可能性があるため）
             if (!string.IsNullOrEmpty(e.NotificationId) && dup.NotificationId != e.NotificationId)
             {
                 dup.NotificationId = e.NotificationId;
@@ -360,89 +360,32 @@ public partial class MainViewModel : ObservableObject
         Application.Current?.Dispatcher.Invoke(() =>
         {
             EntryCount = _state.EntryCount;
-            CanDraw    = EntryCount > 0;
+            // 受付終了後にも応募が来た場合はCanDrawを再評価
+            if (_state.Status == SessionStatus.ReceptionClosed)
+                CanDraw = EntryCount > 0;
             Entries.Add(new EntryViewModel(entry));
         });
 
         Log.Info($"応募受理: {e.DisplayName}");
     }
 
-    private void OnReceptionStarted()
+    // ── ヘルパー ──────────────────────────────────────────
+    private void ResetSession()
     {
-        _state.UpdateStatus(SessionStatus.Accepting);
-        UpdateStatusText(SessionStatus.Accepting);
-        Log.Info("受付を開始しました。");
-    }
-
-    private void OnReceptionEnded()
-    {
-        _state.UpdateStatus(SessionStatus.ReceptionClosed);
-        UpdateStatusText(SessionStatus.ReceptionClosed);
-        Application.Current?.Dispatcher.Invoke(() => CanDraw = EntryCount > 0);
-        Log.Info($"受付を終了しました。応募数: {EntryCount}人");
-    }
-
-    private async Task OnReplyTimeReachedAsync()
-    {
-        if (_activeSession == null) return;
-        await ExecuteDrawAndSendAsync();
-    }
-
-    private async Task ExecuteDrawAndSendAsync()
-    {
-        if (_activeSession == null) return;
-        try
+        _activeSession = null;
+        _state.Reset();
+        Application.Current?.Dispatcher.Invoke(() =>
         {
-            using var scope    = _sp.CreateScope();
-            var lotteryService = scope.ServiceProvider.GetRequiredService<ILotteryService>();
-            var inviteService  = scope.ServiceProvider.GetRequiredService<IInviteService>();
-            var sessionRepo    = scope.ServiceProvider.GetRequiredService<ILotterySessionRepository>();
-            var entryRepo      = scope.ServiceProvider.GetRequiredService<ILotteryEntryRepository>();
-
-            if (!_state.IsDrawn)
-            {
-                var winners = await lotteryService.DrawAsync(_activeSession);
-                foreach (var w in winners) Log.Success($"当選者: {w.DisplayName}");
-                _state.MarkDrawn();
-                _activeSession.DrawExecutedAt = DateTime.UtcNow;
-                _activeSession.Status = SessionStatus.Drawn;
-            }
-
-            var targets = _activeSession.Entries.Where(e => e.IsWinner).ToList();
-            await inviteService.SendInvitesAsync(targets);
-
-            await entryRepo.UpdateRangeAsync(_activeSession.Entries);
-            _activeSession.ReplyExecutedAt = DateTime.UtcNow;
-            _activeSession.Status = SessionStatus.Completed;
-            await sessionRepo.UpdateAsync(_activeSession);
-
-            _state.UpdateStatus(SessionStatus.Completed);
-            UpdateStatusText(SessionStatus.Completed);
-            Log.Success("Invite 送信が完了しました。");
-
-            // 完了後、少し待ってから準備中に戻す
-            await Task.Delay(2000);
-
-            _activeSession = null;
-            _state.Reset();
-
-            Application.Current?.Dispatcher.Invoke(() =>
-            {
-                Entries.Clear();
-                EntryCount      = 0;
-                CanDraw         = false;
-                CanStopSession  = false;
-                CanStartSession = true;
-                NextReplyTime   = "--:--:--";
-            });
-
-            UpdateStatusText(SessionStatus.Waiting);
-            Log.Info("準備中に戻りました。次のセッションを開始できます。");
-        }
-        catch (Exception ex)
-        {
-            Log.Error($"抽選・送信中にエラーが発生しました: {ex.Message}");
-        }
+            Entries.Clear();
+            EntryCount        = 0;
+            CanStartSession   = true;
+            CanStartReception = false;
+            CanCloseReception = false;
+            CanDraw           = false;
+            CanStopSession    = false;
+            NextReplyTime     = "--:--";
+        });
+        UpdateStatusText(SessionStatus.Waiting);
     }
 
     private void RefreshEntries()
@@ -462,15 +405,15 @@ public partial class MainViewModel : ObservableObject
         if (!TryParseTime(ReceptionEndTime, out end))
             { Log.Warning("受付終了時間の形式が正しくありません (例: 22:00)"); ok = false; }
         if (!TryParseTime(ReplyTime, out reply))
-            { Log.Warning("返信時間の形式が正しくありません (例: 22:05)"); ok = false; }
+            { Log.Warning("Invite送信時間の形式が正しくありません (例: 22:05)"); ok = false; }
+        if (ok && start >= end)
+            { Log.Warning("受付開始時間は終了時間より前に設定してください。"); ok = false; }
         return ok;
     }
 
     private static bool TryParseTime(string input, out TimeSpan result)
-        => TimeSpan.TryParseExact(input, @"hh\:mm", null, out result)
-        || TimeSpan.TryParseExact(input, @"h\:mm",  null, out result)
-        || TimeSpan.TryParseExact(input, @"hh\:mm\:ss", null, out result)
-        || TimeSpan.TryParseExact(input, @"h\:mm\:ss",  null, out result);
+        => TimeSpan.TryParseExact(input.Trim(), @"hh\:mm", null, out result)
+        || TimeSpan.TryParseExact(input.Trim(), @"h\:mm",  null, out result);
 
     private void UpdateStatusText(SessionStatus s)
     {
@@ -487,6 +430,56 @@ public partial class MainViewModel : ObservableObject
             _                             => "不明"
         };
         Application.Current?.Dispatcher.Invoke(() => StatusText = text);
+    }
+
+    // ── インスタンス情報ポーリング ────────────────────────
+    private void StartInstancePolling()
+    {
+        _clockTimer = new Timer(
+            _ => Application.Current?.Dispatcher.Invoke(
+                () => CurrentTime = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")),
+            null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+
+        _ = Task.Run(UpdateInstanceInfoAsync);
+        _instancePollingTimer = new Timer(
+            async _ => await UpdateInstanceInfoAsync(),
+            null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private async Task UpdateInstanceInfoAsync()
+    {
+        try
+        {
+            if (!_api.IsLoggedIn) return;
+            var location = await _api.GetLocationAsync();
+
+            string worldName;
+            if (string.IsNullOrEmpty(location)
+                || location.Equals("offline",   StringComparison.OrdinalIgnoreCase)
+                || location.Equals("traveling", StringComparison.OrdinalIgnoreCase))
+            {
+                worldName = "オフライン";
+                location  = string.Empty;
+            }
+            else if (location.Equals("private", StringComparison.OrdinalIgnoreCase))
+            {
+                worldName = "プライベート";
+            }
+            else
+            {
+                var colonIdx = location.IndexOf(':');
+                var worldId  = colonIdx > 0 ? location[..colonIdx] : location;
+                var name     = await _api.GetWorldNameAsync(worldId);
+                worldName    = name ?? worldId;
+            }
+
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                CurrentWorldName  = worldName;
+                CurrentInstanceId = location ?? string.Empty;
+            });
+        }
+        catch { /* サイレント */ }
     }
 }
 
