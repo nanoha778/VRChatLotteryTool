@@ -27,7 +27,7 @@ VRChatの「Request Invite」を自動で受付し、抽選を行い、当選者
 
 1. Releaseページからzipをダウンロード
 2. 任意のフォルダに展開
-3. VRChatLotteryTool.exeを実行
+3. VRChatLotteryToolSetup.exeを実行
 
 データファイルは自動的にAppData配下に作成されます。
 
