@@ -12,7 +12,7 @@ VRChat の Request Invite を自動受付し、重み付き抽選で当選者を
 
 1. リリースページから `VRChatLotteryTool.zip` をダウンロード
 2. 任意のフォルダに展開
-3. `VRChatLotteryTool.exe` を実行
+3. `VRChatLotteryToolSetup.exe` を実行
 
 データファイルは `%AppData%\VRChatLotteryTool\` に自動作成されます。
 
@@ -73,3 +73,5 @@ VRChat の Request Invite を自動受付し、重み付き抽選で当選者を
 ## ライセンス
 
 MIT License
+
+©nanoha_778
