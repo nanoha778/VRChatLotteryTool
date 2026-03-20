@@ -20,3 +20,8 @@ Name: "{commondesktop}\VRChatLotteryTool"; Filename: "{app}\VRChatLotteryTool.ex
 
 [Run]
 Filename: "{app}\VRChatLotteryTool.exe"; Description: "アプリを起動"; Flags: nowait postinstall skipifsilent
+
+[UninstallDelete]
+Type: files; Name: "{localappdata}\VRCLotteryTool\settings.json"
+Type: files; Name: "{localappdata}\VRCLotteryTool\app.log"
+Type: dirifempty; Name: "{localappdata}\VRCLotteryTool"
