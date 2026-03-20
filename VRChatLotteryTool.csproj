@@ -8,21 +8,16 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>VRChatLotteryTool</AssemblyName>
     <RootNamespace>VRChatLotteryTool</RootNamespace>
-    <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Styles.xaml は ResourceDictionary: Page 自動インクルードから除外して Resource として埋め込み -->
-    <Page Remove="Views\Styles.xaml" />
+    <Page     Remove="Views\Styles.xaml" />
     <Resource Include="Views\Styles.xaml" />
 
     <!-- 旧パスが残っていても除外 -->
     <Page Remove="src\UI\Views\MainWindow.xaml" />
     <Page Remove="src\UI\Views\Styles.xaml" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="app.ico" />
   </ItemGroup>
 
   <ItemGroup>

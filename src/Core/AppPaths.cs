@@ -26,6 +26,7 @@ public static class AppPaths
     public static string Credentials => Path.Combine(DataDir, ".credentials");
     public static string AppSettings => Path.Combine(DataDir, "appsettings.json");
     public static string Database    => Path.Combine(DataDir, "lottery.db");
+    public static string LogFile     => Path.Combine(DataDir, "latest.log");
 
     /// <summary>起動時に明示的に呼び出してディレクトリ作成を保証する。</summary>
     public static void EnsureCreated() => Directory.CreateDirectory(DataDir);
