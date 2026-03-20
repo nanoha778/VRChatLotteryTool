@@ -221,10 +221,21 @@ public partial class MainWindow : Window
 
     private void ClearLog(object sender, RoutedEventArgs e) => _vm.Log.Entries.Clear();
 
-    private void OpenDataFolder(object sender, RoutedEventArgs e)
+    private void OpenSettings(object sender, RoutedEventArgs e)
     {
-        System.Diagnostics.Process.Start("explorer.exe", AppPaths.DataDir);
+        var w = new SettingsWindow(_vm) { Owner = this };
+        w.ShowDialog();
     }
+
+    private void OpenDataFolder(object sender, RoutedEventArgs e)
+        => System.Diagnostics.Process.Start("explorer.exe", AppPaths.DataDir);
+
+    private void SetDarkTheme(object sender, RoutedEventArgs e)  => _vm.IsDarkTheme = true;
+    private void SetLightTheme(object sender, RoutedEventArgs e) => _vm.IsDarkTheme = false;
+
+    private void ShowAbout(object sender, RoutedEventArgs e)
+        => MessageBox.Show("VRChat Lottery Tool\n.NET 10 WPF\n\nVRChat の Request Invite を自動受付・抽選・Invite送信するツールです。",
+                           "バージョン情報", MessageBoxButton.OK, MessageBoxImage.Information);
 
     protected override void OnClosed(EventArgs e)
     {

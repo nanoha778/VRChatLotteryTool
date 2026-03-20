@@ -12,68 +12,114 @@
     <conv:BoolToVisibilityConverter   x:Key="BoolToVis"/>
     <conv:LogLevelToColorConverter    x:Key="LogColor"/>
     <conv:WinnerToBackgroundConverter x:Key="WinnerBg"/>
-
-    <!-- タブスタイル -->
-    <Style x:Key="MainTabControl" TargetType="TabControl">
-      <Setter Property="Background"         Value="Transparent"/>
-      <Setter Property="BorderThickness"    Value="0"/>
-      <Setter Property="TabStripPlacement"  Value="Top"/>
-    </Style>
-
-    <Style x:Key="MainTabItem" TargetType="TabItem">
-      <Setter Property="Foreground"      Value="{DynamicResource TextSecondary}"/>
-      <Setter Property="Background"      Value="Transparent"/>
-      <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding"         Value="16,8"/>
-      <Setter Property="FontSize"        Value="12"/>
-      <Setter Property="Cursor"          Value="Hand"/>
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="TabItem">
-            <Border x:Name="bd" Padding="{TemplateBinding Padding}"
-                    BorderThickness="0,0,0,2" BorderBrush="Transparent">
-              <TextBlock x:Name="txt" Text="{TemplateBinding Header}"
-                         Foreground="{DynamicResource TextSecondary}"
-                         FontSize="12" FontWeight="SemiBold"/>
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsSelected" Value="True">
-                <Setter TargetName="bd"  Property="BorderBrush" Value="{DynamicResource Accent}"/>
-                <Setter TargetName="txt" Property="Foreground"  Value="{DynamicResource TextPrimary}"/>
-              </Trigger>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="txt" Property="Opacity" Value="0.8"/>
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-
-    <!-- 設定行スタイル -->
-    <Style x:Key="SettingRow" TargetType="Grid">
-      <Setter Property="Margin" Value="0,0,0,14"/>
-    </Style>
   </Window.Resources>
 
   <Grid>
     <!-- ══ メインコンテンツ ══ -->
     <Grid x:Name="MainContent" IsEnabled="False" Opacity="0.3">
       <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>  <!-- メニューバー -->
+        <RowDefinition Height="Auto"/>  <!-- タイトルバー -->
+        <RowDefinition Height="*"/>     <!-- コンテンツ -->
       </Grid.RowDefinitions>
 
-      <!-- タイトルバー -->
-      <Grid Grid.Row="0" Background="{DynamicResource BgMid}"
-            Height="48">
+      <!-- ── メニューバー ── -->
+      <Menu Grid.Row="0" Background="{DynamicResource BgMid}"
+            Foreground="{DynamicResource TextPrimary}" FontSize="12">
+        <Menu.Resources>
+          <!-- トップレベルのメニュー項目 -->
+          <Style TargetType="MenuItem">
+            <Setter Property="Background"  Value="Transparent"/>
+            <Setter Property="Foreground"  Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="Padding"     Value="10,5"/>
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                  <Border x:Name="bd" Background="{TemplateBinding Background}"
+                          Padding="{TemplateBinding Padding}">
+                    <Grid>
+                      <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"/>
+                      <Popup x:Name="PART_Popup"
+                             IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                             Placement="Bottom" AllowsTransparency="True"
+                             PopupAnimation="Fade">
+                        <Border Background="{DynamicResource BgMid}"
+                                BorderBrush="{DynamicResource Border}"
+                                BorderThickness="1" CornerRadius="4"
+                                MinWidth="160">
+                          <StackPanel IsItemsHost="True"/>
+                        </Border>
+                      </Popup>
+                    </Grid>
+                  </Border>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsHighlighted" Value="True">
+                      <Setter TargetName="bd" Property="Background" Value="{DynamicResource SecondaryBtn}"/>
+                    </Trigger>
+                    <Trigger Property="IsSubmenuOpen" Value="True">
+                      <Setter TargetName="bd" Property="Background" Value="{DynamicResource SecondaryBtn}"/>
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+
+          <!-- サブメニュー項目用スタイル（x:Key付き）-->
+          <Style x:Key="SubMenuItem" TargetType="MenuItem">
+            <Setter Property="Background"  Value="Transparent"/>
+            <Setter Property="Foreground"  Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="Padding"     Value="12,7"/>
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                  <Border x:Name="bd" Background="{TemplateBinding Background}"
+                          Padding="{TemplateBinding Padding}">
+                    <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"/>
+                  </Border>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsHighlighted" Value="True">
+                      <Setter TargetName="bd" Property="Background" Value="{DynamicResource SecondaryBtn}"/>
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+
+          <Style TargetType="Separator">
+            <Setter Property="Background" Value="{DynamicResource Border}"/>
+            <Setter Property="Height"     Value="1"/>
+            <Setter Property="Margin"     Value="6,2"/>
+          </Style>
+        </Menu.Resources>
+
+        <MenuItem Header="全般(_G)">
+          <MenuItem Header="設定(_S)..."              Style="{StaticResource SubMenuItem}" Click="OpenSettings"/>
+          <Separator/>
+          <MenuItem Header="データフォルダを開く(_D)" Style="{StaticResource SubMenuItem}" Click="OpenDataFolder"/>
+          <Separator/>
+          <MenuItem Header="ログアウト(_L)"           Style="{StaticResource SubMenuItem}" Command="{Binding LogoutCommand}"/>
+        </MenuItem>
+
+        <MenuItem Header="表示(_V)">
+          <MenuItem Header="🌙 ダークモード" Style="{StaticResource SubMenuItem}" Click="SetDarkTheme"/>
+          <MenuItem Header="☀️ ライトモード"  Style="{StaticResource SubMenuItem}" Click="SetLightTheme"/>
+        </MenuItem>
+
+        <MenuItem Header="ヘルプ(_H)">
+          <MenuItem Header="バージョン情報(_A)" Style="{StaticResource SubMenuItem}" Click="ShowAbout"/>
+        </MenuItem>
+      </Menu>
+
+      <!-- ── タイトルバー ── -->
+      <Grid Grid.Row="1" Background="{DynamicResource BgMid}" Height="46">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto"/>
           <ColumnDefinition Width="*"/>
           <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <!-- 左：アプリ名 + 時刻 -->
         <StackPanel Grid.Column="0" Orientation="Horizontal"
                     VerticalAlignment="Center" Margin="16,0,0,0">
           <TextBlock Text="🎲" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
@@ -86,17 +132,15 @@
           </Border>
         </StackPanel>
 
-        <!-- 右：ユーザー・状態・ログアウト -->
         <StackPanel Grid.Column="2" Orientation="Horizontal"
                     VerticalAlignment="Center" Margin="0,0,16,0">
           <TextBlock Text="👤 " FontSize="12" VerticalAlignment="Center"/>
           <TextBlock Text="{Binding LoginUserName}" FontSize="12"
                      Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center"/>
           <TextBlock Text=" @ " FontSize="11" Foreground="#505070" VerticalAlignment="Center"/>
-          <TextBlock Text="{Binding CurrentWorldName}" FontSize="11"
-                     Foreground="#6080A0" VerticalAlignment="Center"
-                     ToolTip="{Binding CurrentInstanceId}"/>
-          <Border Style="{StaticResource StatusBadge}" Margin="12,0,8,0">
+          <TextBlock Text="{Binding CurrentWorldName}" FontSize="11" Foreground="#6080A0"
+                     VerticalAlignment="Center" ToolTip="{Binding CurrentInstanceId}"/>
+          <Border Style="{StaticResource StatusBadge}" Margin="12,0,0,0">
             <StackPanel Orientation="Horizontal">
               <TextBlock Text="状態: " Style="{StaticResource LabelStyle}"
                          VerticalAlignment="Center" Margin="0"/>
@@ -104,391 +148,216 @@
                          Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
             </StackPanel>
           </Border>
-          <Button Content="🚪 ログアウト" Style="{StaticResource SecondaryButton}"
-                  Padding="10,5" FontSize="11" Command="{Binding LogoutCommand}"/>
         </StackPanel>
       </Grid>
 
-      <!-- タブエリア -->
-      <TabControl Grid.Row="1" Style="{StaticResource MainTabControl}"
-                  Background="{DynamicResource BgDark}">
-        <TabControl.Resources>
-          <Style TargetType="TabItem" BasedOn="{StaticResource MainTabItem}"/>
-        </TabControl.Resources>
+      <!-- ── コンテンツ ── -->
+      <Grid Grid.Row="2" Margin="14">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="290"/>
+          <ColumnDefinition Width="10"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-        <!-- ══ 全般タブ ══ -->
-        <TabItem Header="全般">
-          <ScrollViewer VerticalScrollBarVisibility="Auto"
-                        HorizontalScrollBarVisibility="Disabled"
-                        Margin="0">
-            <StackPanel Margin="24,20,24,20" MaxWidth="520">
+        <!-- 左カラム -->
+        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <StackPanel>
 
-              <!-- テーマ -->
-              <TextBlock Text="外観" FontSize="14" FontWeight="Bold"
-                         Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,16"/>
-              <Border Style="{StaticResource Panel}" Margin="0,0,0,20">
-                <StackPanel>
-                  <Grid Style="{StaticResource SettingRow}">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*"/>
-                      <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0">
-                      <TextBlock Text="テーマ" FontSize="13"
-                                 Foreground="{DynamicResource TextPrimary}"/>
-                      <TextBlock Text="ダークモード / ライトモードを切り替えます"
-                                 Style="{StaticResource LabelStyle}" Margin="0,2,0,0"/>
-                    </StackPanel>
-                    <ToggleButton Grid.Column="1" IsChecked="{Binding IsDarkTheme}"
-                                  Width="120" Height="32" Cursor="Hand" BorderThickness="0">
-                      <ToggleButton.Style>
-                        <Style TargetType="ToggleButton">
-                          <Setter Property="Template">
-                            <Setter.Value>
-                              <ControlTemplate TargetType="ToggleButton">
-                                <Border x:Name="bd" CornerRadius="16"
-                                        Background="{DynamicResource SecondaryBtn}"
-                                        Padding="12,0">
-                                  <TextBlock x:Name="txt" Text="🌙 ダーク"
-                                             Foreground="White" FontSize="12"
-                                             FontWeight="SemiBold"
-                                             HorizontalAlignment="Center"
-                                             VerticalAlignment="Center"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                  <Trigger Property="IsChecked" Value="False">
-                                    <Setter TargetName="bd"  Property="Background" Value="#E0A020"/>
-                                    <Setter TargetName="txt" Property="Text"       Value="☀️ ライト"/>
-                                  </Trigger>
-                                </ControlTemplate.Triggers>
-                              </ControlTemplate>
-                            </Setter.Value>
-                          </Setter>
-                        </Style>
-                      </ToggleButton.Style>
-                    </ToggleButton>
-                  </Grid>
-                </StackPanel>
-              </Border>
-
-              <!-- アカウント情報 -->
-              <TextBlock Text="アカウント" FontSize="14" FontWeight="Bold"
-                         Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,16"/>
-              <Border Style="{StaticResource Panel}" Margin="0,0,0,20">
-                <StackPanel>
-                  <Grid Style="{StaticResource SettingRow}">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="120"/>
-                      <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="ユーザー名"
-                               Style="{StaticResource LabelStyle}" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Text="{Binding LoginUserName}"
-                               Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center"/>
-                  </Grid>
-                  <Grid Style="{StaticResource SettingRow}">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="120"/>
-                      <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="現在のワールド"
-                               Style="{StaticResource LabelStyle}" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Text="{Binding CurrentWorldName}"
-                               Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center"
-                               ToolTip="{Binding CurrentInstanceId}"/>
-                  </Grid>
-                  <Grid Margin="0">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="120"/>
-                      <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="インスタンスID"
-                               Style="{StaticResource LabelStyle}" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Text="{Binding CurrentInstanceId}"
-                               Foreground="#6080A0" FontSize="11" TextWrapping="Wrap"
-                               VerticalAlignment="Center"/>
-                  </Grid>
-                </StackPanel>
-              </Border>
-
-              <!-- データ -->
-              <TextBlock Text="データ" FontSize="14" FontWeight="Bold"
-                         Foreground="{DynamicResource TextPrimary}" Margin="0,0,0,16"/>
-              <Border Style="{StaticResource Panel}">
-                <StackPanel>
-                  <Grid Style="{StaticResource SettingRow}">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*"/>
-                      <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0">
-                      <TextBlock Text="データフォルダを開く"
-                                 Foreground="{DynamicResource TextPrimary}" FontSize="13"/>
-                      <TextBlock Text="%AppData%\VRChatLotteryTool"
-                                 Style="{StaticResource LabelStyle}" Margin="0,2,0,0"/>
-                    </StackPanel>
-                    <Button Grid.Column="1" Content="開く" Style="{StaticResource SecondaryButton}"
-                            Padding="16,6" Click="OpenDataFolder"/>
-                  </Grid>
-                  <Separator/>
-                  <Grid Margin="0,8,0,0">
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*"/>
-                      <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0">
-                      <TextBlock Text="ログアウト"
-                                 Foreground="{DynamicResource TextPrimary}" FontSize="13"/>
-                      <TextBlock Text="Cookieと保存済み認証情報を削除します"
-                                 Style="{StaticResource LabelStyle}" Margin="0,2,0,0"/>
-                    </StackPanel>
-                    <Button Grid.Column="1" Content="ログアウト"
-                            Padding="16,6" Command="{Binding LogoutCommand}">
-                      <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-                          <Setter Property="Background" Value="#7B1F1F"/>
-                        </Style>
-                      </Button.Style>
-                    </Button>
-                  </Grid>
-                </StackPanel>
-              </Border>
-
-            </StackPanel>
-          </ScrollViewer>
-        </TabItem>
-
-        <!-- ══ 抽選タブ ══ -->
-        <TabItem Header="抽選">
-          <Grid Margin="14">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="290"/>
-              <ColumnDefinition Width="10"/>
-              <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- 左カラム -->
-            <ScrollViewer Grid.Column="0"
-                          VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled">
+            <!-- 設定パネル -->
+            <Border Style="{StaticResource Panel}" Margin="0,0,0,10">
               <StackPanel>
-
-                <!-- 設定パネル -->
-                <Border Style="{StaticResource Panel}" Margin="0,0,0,10">
-                  <StackPanel>
-                    <TextBlock Text="⚙  設定" Style="{StaticResource SectionHeader}"/>
-                    <Separator/>
-
-                    <TextBlock Text="当選人数" Style="{StaticResource LabelStyle}" Margin="0,8,0,3"/>
-                    <StackPanel Orientation="Horizontal">
-                      <Button Content="－" Style="{StaticResource SecondaryButton}"
-                              Width="32" Padding="0" Click="DecrementWinnerCount"/>
-                      <TextBox Text="{Binding WinnerCount, UpdateSourceTrigger=PropertyChanged}"
-                               Style="{StaticResource NumberBox}" Margin="6,0"/>
-                      <Button Content="＋" Style="{StaticResource SecondaryButton}"
-                              Width="32" Padding="0" Click="IncrementWinnerCount"/>
-                      <TextBlock Text="人" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                    </StackPanel>
-
-                    <TextBlock Text="抽選モード" Style="{StaticResource LabelStyle}" Margin="0,12,0,3"/>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                      <ToggleButton Style="{StaticResource ModeToggle}" IsChecked="{Binding IsReliefMode}"/>
-                      <TextBlock Text="{Binding ModeLabel}" Margin="10,0,0,0" FontWeight="SemiBold"
-                                 Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
-                    </StackPanel>
-
-                    <Separator Margin="0,12"/>
-
-                    <TextBlock Text="受付開始時間 (HH:mm)" Style="{StaticResource LabelStyle}"/>
-                    <TextBox Text="{Binding ReceptionStartTime, UpdateSourceTrigger=PropertyChanged}"
-                             Margin="0,0,0,8"/>
-                    <TextBlock Text="受付終了時間 (HH:mm)" Style="{StaticResource LabelStyle}"/>
-                    <TextBox Text="{Binding ReceptionEndTime, UpdateSourceTrigger=PropertyChanged}"
-                             Margin="0,0,0,8"/>
-                    <TextBlock Text="Invite送信時間 (HH:mm)" Style="{StaticResource LabelStyle}"/>
-                    <TextBox Text="{Binding ReplyTime, UpdateSourceTrigger=PropertyChanged}"/>
-                  </StackPanel>
-                </Border>
-
-                <!-- 操作パネル -->
-                <Border Style="{StaticResource Panel}" Margin="0,0,0,10">
-                  <StackPanel>
-                    <TextBlock Text="▶  操作" Style="{StaticResource SectionHeader}"/>
-                    <Separator/>
-
-                    <Button Content="📋  セッション開始" Style="{StaticResource StartButton}"
-                            Margin="0,8,0,8" IsEnabled="{Binding CanStartSession}"
-                            Command="{Binding StartSessionCommand}"/>
-
-                    <Button Content="✅  受付開始" Margin="0,0,0,8"
-                            IsEnabled="{Binding CanStartReception}"
-                            Command="{Binding StartReceptionManuallyCommand}">
-                      <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-                          <Setter Property="Background" Value="{DynamicResource SecondaryBtn}"/>
-                          <Style.Triggers>
-                            <Trigger Property="IsEnabled" Value="True">
-                              <Setter Property="Background" Value="#1B5E20"/>
-                            </Trigger>
-                          </Style.Triggers>
-                        </Style>
-                      </Button.Style>
-                    </Button>
-
-                    <Button Content="🔒  受付終了" Margin="0,0,0,8"
-                            IsEnabled="{Binding CanCloseReception}"
-                            Command="{Binding CloseReceptionManuallyCommand}">
-                      <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-                          <Setter Property="Background" Value="{DynamicResource SecondaryBtn}"/>
-                          <Style.Triggers>
-                            <Trigger Property="IsEnabled" Value="True">
-                              <Setter Property="Background" Value="#1565C0"/>
-                            </Trigger>
-                          </Style.Triggers>
-                        </Style>
-                      </Button.Style>
-                    </Button>
-
-                    <Button Content="🎲  抽選・Invite送信" Style="{StaticResource PrimaryButton}"
-                            Margin="0,0,0,8" IsEnabled="{Binding CanDraw}"
-                            Command="{Binding DrawNowCommand}"/>
-
-                    <Button Content="⏹  セッション終了" Margin="0,0,0,0"
-                            IsEnabled="{Binding CanStopSession}"
-                            Command="{Binding StopSessionCommand}">
-                      <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-                          <Setter Property="Background" Value="{DynamicResource SecondaryBtn}"/>
-                          <Style.Triggers>
-                            <Trigger Property="IsEnabled" Value="True">
-                              <Setter Property="Background" Value="#7B1FA2"/>
-                            </Trigger>
-                          </Style.Triggers>
-                        </Style>
-                      </Button.Style>
-                    </Button>
-                  </StackPanel>
-                </Border>
-
-                <!-- 統計パネル -->
-                <Border Style="{StaticResource Panel}">
-                  <Grid>
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*"/>
-                      <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                      <RowDefinition/>
-                      <RowDefinition Height="10"/>
-                      <RowDefinition/>
-                    </Grid.RowDefinitions>
-
-                    <StackPanel Grid.Column="0" Grid.Row="0" HorizontalAlignment="Center">
-                      <TextBlock Text="応募" Style="{StaticResource LabelStyle}" HorizontalAlignment="Center"/>
-                      <TextBlock Text="{Binding EntryCount}" FontSize="26" FontWeight="Bold"
-                                 Foreground="{DynamicResource Accent}" HorizontalAlignment="Center"/>
-                      <TextBlock Text="人" Style="{StaticResource LabelStyle}" HorizontalAlignment="Center"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="1" Grid.Row="0" HorizontalAlignment="Center">
-                      <TextBlock Text="当選" Style="{StaticResource LabelStyle}" HorizontalAlignment="Center"/>
-                      <TextBlock Text="{Binding WinnerCount}" FontSize="26" FontWeight="Bold"
-                                 Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center"/>
-                      <TextBlock Text="人" Style="{StaticResource LabelStyle}" HorizontalAlignment="Center"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="2"
-                                HorizontalAlignment="Center">
-                      <TextBlock Text="Invite送信予定" Style="{StaticResource LabelStyle}"
-                                 HorizontalAlignment="Center"/>
-                      <TextBlock Text="{Binding NextReplyTime}" FontSize="17" FontWeight="Bold"
-                                 Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                  </Grid>
-                </Border>
-
+                <TextBlock Text="⚙  設定" Style="{StaticResource SectionHeader}"/>
+                <Separator/>
+                <TextBlock Text="当選人数" Style="{StaticResource LabelStyle}" Margin="0,8,0,3"/>
+                <StackPanel Orientation="Horizontal">
+                  <Button Content="－" Style="{StaticResource SecondaryButton}"
+                          Width="32" Padding="0" Click="DecrementWinnerCount"/>
+                  <TextBox Text="{Binding WinnerCount, UpdateSourceTrigger=PropertyChanged}"
+                           Style="{StaticResource NumberBox}" Margin="6,0"/>
+                  <Button Content="＋" Style="{StaticResource SecondaryButton}"
+                          Width="32" Padding="0" Click="IncrementWinnerCount"/>
+                  <TextBlock Text="人" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                </StackPanel>
+                <TextBlock Text="抽選モード" Style="{StaticResource LabelStyle}" Margin="0,12,0,3"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                  <ToggleButton Style="{StaticResource ModeToggle}" IsChecked="{Binding IsReliefMode}"/>
+                  <TextBlock Text="{Binding ModeLabel}" Margin="10,0,0,0" FontWeight="SemiBold"
+                             Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Separator Margin="0,12"/>
+                <TextBlock Text="受付開始時間 (HH:mm)" Style="{StaticResource LabelStyle}"/>
+                <TextBox Text="{Binding ReceptionStartTime, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="0,0,0,8"/>
+                <TextBlock Text="受付終了時間 (HH:mm)" Style="{StaticResource LabelStyle}"/>
+                <TextBox Text="{Binding ReceptionEndTime, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="0,0,0,8"/>
+                <TextBlock Text="Invite送信時間 (HH:mm)" Style="{StaticResource LabelStyle}"/>
+                <TextBox Text="{Binding ReplyTime, UpdateSourceTrigger=PropertyChanged}"/>
               </StackPanel>
-            </ScrollViewer>
+            </Border>
 
-            <!-- 右カラム -->
-            <Grid Grid.Column="2">
+            <!-- 操作パネル -->
+            <Border Style="{StaticResource Panel}" Margin="0,0,0,10">
+              <StackPanel>
+                <TextBlock Text="▶  操作" Style="{StaticResource SectionHeader}"/>
+                <Separator/>
+                <Button Content="📋  セッション開始" Style="{StaticResource StartButton}"
+                        Margin="0,8,0,8" IsEnabled="{Binding CanStartSession}"
+                        Command="{Binding StartSessionCommand}"/>
+                <Button Content="✅  受付開始" Margin="0,0,0,8"
+                        IsEnabled="{Binding CanStartReception}"
+                        Command="{Binding StartReceptionManuallyCommand}">
+                  <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+                      <Setter Property="Background" Value="{DynamicResource SecondaryBtn}"/>
+                      <Style.Triggers>
+                        <Trigger Property="IsEnabled" Value="True">
+                          <Setter Property="Background" Value="#1B5E20"/>
+                        </Trigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Button.Style>
+                </Button>
+                <Button Content="🔒  受付終了" Margin="0,0,0,8"
+                        IsEnabled="{Binding CanCloseReception}"
+                        Command="{Binding CloseReceptionManuallyCommand}">
+                  <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+                      <Setter Property="Background" Value="{DynamicResource SecondaryBtn}"/>
+                      <Style.Triggers>
+                        <Trigger Property="IsEnabled" Value="True">
+                          <Setter Property="Background" Value="#1565C0"/>
+                        </Trigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Button.Style>
+                </Button>
+                <Button Content="🎲  抽選・Invite送信" Style="{StaticResource PrimaryButton}"
+                        Margin="0,0,0,8" IsEnabled="{Binding CanDraw}"
+                        Command="{Binding DrawNowCommand}"/>
+                <Button Content="⏹  セッション終了" Margin="0,0,0,0"
+                        IsEnabled="{Binding CanStopSession}"
+                        Command="{Binding StopSessionCommand}">
+                  <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+                      <Setter Property="Background" Value="{DynamicResource SecondaryBtn}"/>
+                      <Style.Triggers>
+                        <Trigger Property="IsEnabled" Value="True">
+                          <Setter Property="Background" Value="#7B1FA2"/>
+                        </Trigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Button.Style>
+                </Button>
+              </StackPanel>
+            </Border>
+
+            <!-- 統計パネル -->
+            <Border Style="{StaticResource Panel}">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                  <RowDefinition/>
+                  <RowDefinition Height="10"/>
+                  <RowDefinition/>
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Column="0" Grid.Row="0" HorizontalAlignment="Center">
+                  <TextBlock Text="応募" Style="{StaticResource LabelStyle}" HorizontalAlignment="Center"/>
+                  <TextBlock Text="{Binding EntryCount}" FontSize="26" FontWeight="Bold"
+                             Foreground="{DynamicResource Accent}" HorizontalAlignment="Center"/>
+                  <TextBlock Text="人" Style="{StaticResource LabelStyle}" HorizontalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Grid.Row="0" HorizontalAlignment="Center">
+                  <TextBlock Text="当選" Style="{StaticResource LabelStyle}" HorizontalAlignment="Center"/>
+                  <TextBlock Text="{Binding WinnerCount}" FontSize="26" FontWeight="Bold"
+                             Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center"/>
+                  <TextBlock Text="人" Style="{StaticResource LabelStyle}" HorizontalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="2" HorizontalAlignment="Center">
+                  <TextBlock Text="Invite送信予定" Style="{StaticResource LabelStyle}"
+                             HorizontalAlignment="Center"/>
+                  <TextBlock Text="{Binding NextReplyTime}" FontSize="17" FontWeight="Bold"
+                             Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center"/>
+                </StackPanel>
+              </Grid>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 右カラム -->
+        <Grid Grid.Column="2">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="*" MinHeight="180"/>
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="*" MinHeight="160"/>
+          </Grid.RowDefinitions>
+
+          <Border Grid.Row="0" Style="{StaticResource Panel}">
+            <Grid>
               <Grid.RowDefinitions>
-                <RowDefinition Height="*" MinHeight="180"/>
-                <RowDefinition Height="10"/>
-                <RowDefinition Height="*" MinHeight="160"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
               </Grid.RowDefinitions>
-
-              <!-- 応募者一覧 -->
-              <Border Grid.Row="0" Style="{StaticResource Panel}">
-                <Grid>
-                  <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                  </Grid.RowDefinitions>
-                  <TextBlock Grid.Row="0" Text="👥  応募者一覧" Style="{StaticResource SectionHeader}"/>
-                  <ListView Grid.Row="1" ItemsSource="{Binding Entries}"
-                            ScrollViewer.VerticalScrollBarVisibility="Auto">
-                    <ListView.View>
-                      <GridView>
-                        <GridViewColumn Header="表示名"    Width="200"
-                                        DisplayMemberBinding="{Binding DisplayName}"/>
-                        <GridViewColumn Header="応募時刻"  Width="80"
-                                        DisplayMemberBinding="{Binding RequestedAt}"/>
-                        <GridViewColumn Header="ステータス" Width="90"
-                                        DisplayMemberBinding="{Binding Status}"/>
-                      </GridView>
-                    </ListView.View>
-                    <ListView.ItemContainerStyle>
-                      <Style TargetType="ListViewItem"
-                             BasedOn="{StaticResource {x:Type ListViewItem}}">
-                        <Setter Property="Background"
-                                Value="{Binding IsWinner, Converter={StaticResource WinnerBg}}"/>
-                      </Style>
-                    </ListView.ItemContainerStyle>
-                  </ListView>
-                </Grid>
-              </Border>
-
-              <!-- ログ -->
-              <Border Grid.Row="2" Style="{StaticResource Panel}">
-                <Grid>
-                  <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                  </Grid.RowDefinitions>
-                  <Grid Grid.Row="0" Margin="0,0,0,6">
-                    <TextBlock Text="📋  ログ" Style="{StaticResource SectionHeader}" Margin="0"/>
-                    <Button Content="クリア" Style="{StaticResource SecondaryButton}"
-                            Padding="8,3" FontSize="11" HorizontalAlignment="Right"
-                            Click="ClearLog"/>
-                  </Grid>
-                  <ListView Grid.Row="1" x:Name="LogListView"
-                            ItemsSource="{Binding LogEntries}"
-                            ScrollViewer.VerticalScrollBarVisibility="Auto">
-                    <ListView.View>
-                      <GridView>
-                        <GridViewColumn Header="時刻" Width="70"
-                                        DisplayMemberBinding="{Binding FormattedTime}"/>
-                        <GridViewColumn Header="メッセージ" Width="9999">
-                          <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                              <TextBlock Text="{Binding Message}"
-                                         Foreground="{Binding Level,
-                                           Converter={StaticResource LogColor}}"
-                                         TextWrapping="NoWrap"/>
-                            </DataTemplate>
-                          </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                      </GridView>
-                    </ListView.View>
-                  </ListView>
-                </Grid>
-              </Border>
+              <TextBlock Grid.Row="0" Text="👥  応募者一覧" Style="{StaticResource SectionHeader}"/>
+              <ListView Grid.Row="1" ItemsSource="{Binding Entries}"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <ListView.View>
+                  <GridView>
+                    <GridViewColumn Header="表示名"    Width="200"
+                                    DisplayMemberBinding="{Binding DisplayName}"/>
+                    <GridViewColumn Header="応募時刻"  Width="80"
+                                    DisplayMemberBinding="{Binding RequestedAt}"/>
+                    <GridViewColumn Header="ステータス" Width="90"
+                                    DisplayMemberBinding="{Binding Status}"/>
+                  </GridView>
+                </ListView.View>
+                <ListView.ItemContainerStyle>
+                  <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
+                    <Setter Property="Background"
+                            Value="{Binding IsWinner, Converter={StaticResource WinnerBg}}"/>
+                  </Style>
+                </ListView.ItemContainerStyle>
+              </ListView>
             </Grid>
-          </Grid>
-        </TabItem>
-      </TabControl>
+          </Border>
+
+          <Border Grid.Row="2" Style="{StaticResource Panel}">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+              </Grid.RowDefinitions>
+              <Grid Grid.Row="0" Margin="0,0,0,6">
+                <TextBlock Text="📋  ログ" Style="{StaticResource SectionHeader}" Margin="0"/>
+                <Button Content="クリア" Style="{StaticResource SecondaryButton}"
+                        Padding="8,3" FontSize="11" HorizontalAlignment="Right" Click="ClearLog"/>
+              </Grid>
+              <ListView Grid.Row="1" x:Name="LogListView" ItemsSource="{Binding LogEntries}"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <ListView.View>
+                  <GridView>
+                    <GridViewColumn Header="時刻" Width="70"
+                                    DisplayMemberBinding="{Binding FormattedTime}"/>
+                    <GridViewColumn Header="メッセージ" Width="9999">
+                      <GridViewColumn.CellTemplate>
+                        <DataTemplate>
+                          <TextBlock Text="{Binding Message}"
+                                     Foreground="{Binding Level, Converter={StaticResource LogColor}}"
+                                     TextWrapping="NoWrap"/>
+                        </DataTemplate>
+                      </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                  </GridView>
+                </ListView.View>
+              </ListView>
+            </Grid>
+          </Border>
+        </Grid>
+      </Grid>
     </Grid>
 
     <!-- ══ ログインオーバーレイ ══ -->
@@ -502,7 +371,6 @@
                      Foreground="#EAEAEA" HorizontalAlignment="Center"/>
           <TextBlock Text="VRChat アカウントでログイン" FontSize="12" Foreground="#A0A0B0"
                      HorizontalAlignment="Center" Margin="0,6,0,20"/>
-
           <StackPanel x:Name="LoginFormPanel">
             <TextBlock Text="ユーザー名 または メールアドレス"
                        FontSize="11" Foreground="#A0A0B0" Margin="0,0,0,4"/>
@@ -512,19 +380,15 @@
             <CheckBox x:Name="RememberCheck" Content="ログイン情報を保存する"
                       Foreground="#A0A0B0" FontSize="11"/>
           </StackPanel>
-
           <StackPanel x:Name="TwoFaPanel" Visibility="Collapsed">
-            <TextBlock Text="2要素認証コード"
-                       FontSize="11" Foreground="#A0A0B0" Margin="0,0,0,4"/>
-            <TextBox x:Name="TwoFaCodeBox" Margin="0,0,0,8" MaxLength="6"
-                     KeyDown="LoginInputKeyDown"/>
-            <TextBlock x:Name="TwoFaHintText" FontSize="11" Foreground="#A0A0B0"
-                       TextWrapping="Wrap"/>
+            <TextBlock Text="2要素認証コード" FontSize="11" Foreground="#A0A0B0" Margin="0,0,0,4"/>
+            <TextBox x:Name="TwoFaCodeBox" Margin="0,0,0,8" MaxLength="6" KeyDown="LoginInputKeyDown"/>
+            <TextBlock x:Name="TwoFaHintText" FontSize="11" Foreground="#A0A0B0" TextWrapping="Wrap"/>
             <Button x:Name="BackButton" Click="BackToLoginClick" Cursor="Hand"
                     HorizontalAlignment="Center" Margin="0,16,0,0">
               <Button.Style>
                 <Style TargetType="Button">
-                  <Setter Property="Background"    Value="Transparent"/>
+                  <Setter Property="Background" Value="Transparent"/>
                   <Setter Property="BorderThickness" Value="0"/>
                   <Setter Property="Template">
                     <Setter.Value>
@@ -547,10 +411,8 @@
               </Button.Style>
             </Button>
           </StackPanel>
-
           <TextBlock x:Name="LoginErrorText" Foreground="#F44336" FontSize="12"
                      TextWrapping="Wrap" Margin="0,12,0,0" Visibility="Collapsed"/>
-
           <Button x:Name="LoginButton" Content="ログイン" Height="44" Margin="0,16,0,0"
                   FontSize="14" FontWeight="SemiBold" Foreground="White"
                   BorderThickness="0" Cursor="Hand" Click="LoginButtonClick">
@@ -560,10 +422,8 @@
                 <Setter Property="Template">
                   <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                      <Border x:Name="bd" Background="{TemplateBinding Background}"
-                              CornerRadius="6">
-                        <ContentPresenter HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"/>
+                      <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                       </Border>
                       <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -579,7 +439,6 @@
               </Style>
             </Button.Style>
           </Button>
-
           <TextBlock x:Name="LoginStatusText" Text="" FontSize="11" Foreground="#A0A0B0"
                      HorizontalAlignment="Center" Margin="0,10,0,0"/>
         </StackPanel>
