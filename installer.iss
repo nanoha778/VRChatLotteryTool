@@ -21,7 +21,25 @@ Name: "{commondesktop}\VRChatLotteryTool"; Filename: "{app}\VRChatLotteryTool.ex
 [Run]
 Filename: "{app}\VRChatLotteryTool.exe"; Description: "アプリを起動"; Flags: nowait postinstall skipifsilent
 
-[UninstallDelete]
-Type: files; Name: "{localappdata}\VRCLotteryTool\settings.json"
-Type: files; Name: "{localappdata}\VRCLotteryTool\app.log"
-Type: dirifempty; Name: "{localappdata}\VRCLotteryTool"
+[Code]
+var
+  DeleteUserData: Boolean;
+
+function InitializeUninstall(): Boolean;
+begin
+  DeleteUserData := MsgBox(
+    '設定ファイルやログも削除しますか？',
+    mbConfirmation,
+    MB_YESNO
+  ) = IDYES;
+
+  Result := True;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if (CurUninstallStep = usUninstall) and DeleteUserData then
+  begin
+    DelTree(ExpandConstant('{localappdata}\VRChatLotteryTool'), True, True, True);
+  end;
+end;

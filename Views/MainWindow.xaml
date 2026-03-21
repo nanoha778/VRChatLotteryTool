@@ -369,21 +369,49 @@
           <TextBlock Text="🎲" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,8"/>
           <TextBlock Text="VRChat Lottery Tool" FontSize="20" FontWeight="Bold"
                      Foreground="#EAEAEA" HorizontalAlignment="Center"/>
-          <TextBlock Text="VRChat アカウントでログイン" FontSize="12" Foreground="#A0A0B0"
+          <TextBlock Text="VRChat アカウントでログイン" FontSize="12" Foreground="#B0B0C8"
                      HorizontalAlignment="Center" Margin="0,6,0,20"/>
           <StackPanel x:Name="LoginFormPanel">
             <TextBlock Text="ユーザー名 または メールアドレス"
-                       FontSize="11" Foreground="#A0A0B0" Margin="0,0,0,4"/>
+                       FontSize="11" Foreground="#B0B0C8" Margin="0,0,0,4"/>
             <TextBox x:Name="UsernameBox" Margin="0,0,0,12" KeyDown="LoginInputKeyDown"/>
-            <TextBlock Text="パスワード" FontSize="11" Foreground="#A0A0B0" Margin="0,0,0,4"/>
+            <TextBlock Text="パスワード" FontSize="11" Foreground="#B0B0C8" Margin="0,0,0,4"/>
             <PasswordBox x:Name="PasswordBox" Margin="0,0,0,12" KeyDown="LoginInputKeyDown"/>
-            <CheckBox x:Name="RememberCheck" Content="ログイン情報を保存する"
-                      Foreground="#A0A0B0" FontSize="11"/>
+            <CheckBox x:Name="RememberCheck" Margin="0,0,0,0">
+              <CheckBox.Style>
+                <Style TargetType="CheckBox">
+                  <Setter Property="Template">
+                    <Setter.Value>
+                      <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Cursor="Hand">
+                          <Border x:Name="box" Width="16" Height="16" CornerRadius="3"
+                                  BorderBrush="#6080A0" BorderThickness="1.5"
+                                  Background="Transparent" Margin="0,0,8,0">
+                            <TextBlock x:Name="check" Text="✓" FontSize="11" FontWeight="Bold"
+                                       Foreground="#E94560" HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" Visibility="Collapsed"/>
+                          </Border>
+                          <TextBlock Text="ログイン情報を保存する"
+                                     Foreground="#DDDDEE" FontSize="12"
+                                     VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                          <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="check" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="box"   Property="BorderBrush" Value="#E94560"/>
+                          </Trigger>
+                        </ControlTemplate.Triggers>
+                      </ControlTemplate>
+                    </Setter.Value>
+                  </Setter>
+                </Style>
+              </CheckBox.Style>
+            </CheckBox>
           </StackPanel>
           <StackPanel x:Name="TwoFaPanel" Visibility="Collapsed">
-            <TextBlock Text="2要素認証コード" FontSize="11" Foreground="#A0A0B0" Margin="0,0,0,4"/>
+            <TextBlock Text="2要素認証コード" FontSize="11" Foreground="#B0B0C8" Margin="0,0,0,4"/>
             <TextBox x:Name="TwoFaCodeBox" Margin="0,0,0,8" MaxLength="6" KeyDown="LoginInputKeyDown"/>
-            <TextBlock x:Name="TwoFaHintText" FontSize="11" Foreground="#A0A0B0" TextWrapping="Wrap"/>
+            <TextBlock x:Name="TwoFaHintText" FontSize="11" Foreground="#B0B0C8" TextWrapping="Wrap"/>
             <Button x:Name="BackButton" Click="BackToLoginClick" Cursor="Hand"
                     HorizontalAlignment="Center" Margin="0,16,0,0">
               <Button.Style>
